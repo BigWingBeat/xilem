@@ -4,7 +4,7 @@
 use std::marker::PhantomData;
 
 use masonry::core::{ArcStr, NewWidget, PropertySet, StyleProperty};
-use masonry::parley::FontWeight;
+use masonry::parley::{FontFamily, FontFamilyName, FontWeight, GenericFamily};
 use masonry::properties::{ContentColor, LineBreaking};
 use masonry::widgets;
 
@@ -20,6 +20,7 @@ pub fn prose<State, Action>(content: impl Into<ArcStr>) -> Prose<State, Action> 
         text_size: masonry::theme::TEXT_SIZE_NORMAL,
         line_break_mode: LineBreaking::WordWrap,
         weight: FontWeight::NORMAL,
+        font: FontFamily::Single(FontFamilyName::Generic(GenericFamily::SystemUi)),
         phantom: PhantomData,
     }
 }
@@ -44,6 +45,7 @@ pub struct Prose<State, Action> {
     text_size: f32,
     line_break_mode: LineBreaking,
     weight: FontWeight,
+    font: FontFamily<'static>,
     phantom: PhantomData<fn(State) -> Action>,
     // TODO: disabled: bool,
     // TODO: add more attributes of `masonry::widgets::Prose`
@@ -82,6 +84,15 @@ impl<State, Action> Prose<State, Action> {
         self.weight = weight;
         self
     }
+
+    /// Set the [font family](FontFamily) the text will use.
+    ///
+    /// A font family allows for providing fallbacks. If there is no matching font
+    /// for a character, a system font will be used (if the system fonts are enabled).
+    pub fn font(mut self, font: impl Into<FontFamily<'static>>) -> Self {
+        self.font = font.into();
+        self
+    }
 }
 
 fn line_break_clips(linebreaking: LineBreaking) -> bool {
@@ -98,6 +109,7 @@ impl<State: 'static, Action: 'static> View<State, Action, ViewCtx> for Prose<Sta
             .with_text_alignment(self.text_alignment)
             .with_style(StyleProperty::FontSize(self.text_size))
             .with_style(StyleProperty::FontWeight(self.weight))
+            .with_style(StyleProperty::FontFamily(self.font.clone()))
             .with_word_wrap(self.line_break_mode == LineBreaking::WordWrap);
 
         // TODO - Replace this with properties on the Prose view
@@ -147,6 +159,12 @@ impl<State: 'static, Action: 'static> View<State, Action, ViewCtx> for Prose<Sta
         }
         if prev.weight != self.weight {
             widgets::TextArea::insert_style(&mut text_area, StyleProperty::FontWeight(self.weight));
+        }
+        if prev.font != self.font {
+            widgets::TextArea::insert_style(
+                &mut text_area,
+                StyleProperty::FontFamily(self.font.clone()),
+            );
         }
         if prev.line_break_mode != self.line_break_mode {
             widgets::TextArea::set_word_wrap(

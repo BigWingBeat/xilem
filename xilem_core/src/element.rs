@@ -106,3 +106,9 @@ impl<Context> SuperElement<Self, Context> for NoElement {
         ((), f(this))
     }
 }
+
+impl<Context> AnyElement<NoElement, Context> for NoElement {
+    fn replace_inner(this: Self::Mut<'_>, _child: NoElement) -> Self::Mut<'_> {
+        this
+    }
+}
